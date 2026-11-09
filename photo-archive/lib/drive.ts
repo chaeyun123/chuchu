@@ -6,7 +6,7 @@ import { env } from "./env";
  * Google Drive = DB
  *   루트 폴더 (DRIVE_ROOT_FOLDER_ID)
  *     └ 앨범 폴더 (폴더명 = 앨범명 = URL)    appProperties: { cover }
- *         └ 사진 파일 (원본 그대로)          appProperties: { caption, uploader }
+ *         └ 사진 파일 (원본 그대로)          appProperties: { caption, uploader, gameDate, opponent, result }
  *                                           + 드라이브가 자동 추출한 imageMediaMetadata
  */
 
@@ -32,6 +32,27 @@ export type Photo = {
   height?: number;
   caption?: string;
   uploader?: string;
+  device?: DeviceInfo;
+  game: GameInfo;
+};
+
+/** 드라이브가 EXIF에서 뽑아준 촬영 장치 정보 */
+export type DeviceInfo = {
+  make?: string;
+  model?: string;
+  lens?: string;
+  focalLength?: number; // mm
+  aperture?: number; // f값
+  exposureTime?: number; // 초
+  iso?: number;
+};
+
+/** 직접 입력하는 경기 정보 */
+export type GameResult = "win" | "lose";
+export type GameInfo = {
+  date?: string; // YYYY-MM-DD
+  opponent?: string; // NC vs (opponent)
+  result?: GameResult;
 };
 
 // ── 인증 ──────────────────────────────────────────────
@@ -143,17 +164,32 @@ export function listPhotos(albumId: string): Promise<Photo[]> {
   return cached(`photos:${albumId}`, async () => {
     type Raw = {
       id: string; name: string; mimeType: string; size?: string; createdTime: string;
-      imageMediaMetadata?: { width?: number; height?: number; time?: string; rotation?: number };
+      imageMediaMetadata?: {
+        width?: number; height?: number; time?: string; rotation?: number;
+        cameraMake?: string; cameraModel?: string; lens?: string;
+        focalLength?: number; aperture?: number; exposureTime?: number; isoSpeed?: number;
+      };
       appProperties?: Record<string, string>;
     };
     const raw = await listAll<Raw>(
       `'${q(albumId)}' in parents and mimeType contains 'image/' and trashed=false`,
-      "id,name,mimeType,size,createdTime,imageMediaMetadata(width,height,time,rotation),appProperties",
+      "id,name,mimeType,size,createdTime,appProperties," +
+        "imageMediaMetadata(width,height,time,rotation,cameraMake,cameraModel,lens,focalLength,aperture,exposureTime,isoSpeed)",
     );
     const photos = raw.map((f): Photo => {
       const m = f.imageMediaMetadata;
       // 회전 정보(90/270도)가 있으면 가로·세로를 바꿔서 레이아웃이 맞도록
       const swap = m?.rotation === 1 || m?.rotation === 3;
+      const ap = f.appProperties ?? {};
+      const device: DeviceInfo = {
+        make: m?.cameraMake?.trim() || undefined,
+        model: m?.cameraModel?.trim() || undefined,
+        lens: m?.lens?.trim() || undefined,
+        focalLength: m?.focalLength || undefined,
+        aperture: m?.aperture || undefined,
+        exposureTime: m?.exposureTime || undefined,
+        iso: m?.isoSpeed || undefined,
+      };
       return {
         id: f.id,
         name: f.name,
@@ -165,6 +201,12 @@ export function listPhotos(albumId: string): Promise<Photo[]> {
         height: swap ? m?.width : m?.height,
         caption: f.appProperties?.caption,
         uploader: f.appProperties?.uploader,
+        device: Object.values(device).some((v) => v !== undefined) ? device : undefined,
+        game: {
+          date: ap.gameDate || undefined,
+          opponent: ap.opponent || undefined,
+          result: ap.result === "win" || ap.result === "lose" ? ap.result : undefined,
+        },
       };
     });
     // 촬영일 기준 정렬 (없으면 업로드일)
@@ -198,6 +240,22 @@ export async function getArchivedPhotoMeta(fileId: string): Promise<FileMeta | n
       return null;
     }
   });
+}
+
+/** 경기 정보 저장. 빈 값은 삭제(null)로 처리합니다. */
+export async function updateGameInfo(fileId: string, albumId: string, game: GameInfo): Promise<void> {
+  await drive(`/files/${fileId}?fields=id`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      appProperties: {
+        gameDate: game.date || null,
+        opponent: game.opponent ? clipBytes(game.opponent, 100) : null,
+        result: game.result || null,
+      },
+    }),
+  });
+  invalidate(`photos:${albumId}`);
 }
 
 export async function downloadFile(fileId: string): Promise<Response> {

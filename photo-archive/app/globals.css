@@ -59,7 +59,7 @@ h1 { font-size: clamp(1.6rem, 3vw, 2.2rem); font-weight: 700; letter-spacing: -0
 .thumb:hover img { opacity: .88; }
 
 /* 라이트박스 */
-.lightbox { position: fixed; inset: 0; z-index: 50; background: rgba(12, 12, 11, .96); display: grid; place-items: center; padding: 3.5rem 4rem 6rem; }
+.lightbox { position: fixed; inset: 0; z-index: 50; background: rgba(12, 12, 11, .96); display: grid; place-items: center; padding: 3.5rem 4rem 9rem; }
 .lightbox > img { max-width: 100%; max-height: 100%; object-fit: contain; user-select: none; }
 .lb-close, .lb-nav { position: absolute; background: none; border: 0; color: #fff; cursor: pointer; opacity: .7; font-size: 2.6rem; line-height: 1; padding: .5rem 1rem; }
 .lb-close:hover, .lb-nav:hover { opacity: 1; }
@@ -69,6 +69,21 @@ h1 { font-size: clamp(1.6rem, 3vw, 2.2rem); font-weight: 700; letter-spacing: -0
 .lb-bar { position: absolute; left: 0; right: 0; bottom: 0; display: flex; justify-content: space-between; align-items: center; gap: 1rem; padding: 1rem 1.5rem 1.4rem; color: #fff; }
 .lb-caption { margin: 0 0 .2rem; font-weight: 600; }
 .lb-meta { margin: 0; font-size: .85rem; opacity: .65; }
+.lb-info { display: grid; gap: .35rem; min-width: 0; }
+.lb-device { font-size: .78rem; opacity: .55; }
+.lb-game { margin: 0; display: flex; flex-wrap: wrap; gap: .3rem .8rem; font-weight: 600; }
+.result.win { color: #7fd69a; }
+.result.lose { color: #ff8a80; }
+
+/* 경기 정보 입력 */
+.game-form { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem .8rem; }
+.game-form input { font-size: .9rem; padding: .35rem .5rem; background: rgba(255,255,255,.1); color: #fff; border: 1px solid rgba(255,255,255,.25); border-radius: 6px; color-scheme: dark; }
+.game-form input:focus { outline: 2px solid #fff; }
+.game-form .vs { display: inline-flex; align-items: center; gap: .25rem; font-weight: 600; }
+.game-form .vs input { width: 7.5rem; }
+.game-form .check { display: inline-flex; flex-direction: row; align-items: center; gap: .3rem; color: #fff; font-size: .95rem; cursor: pointer; }
+.game-form .check input { width: 1.05rem; height: 1.05rem; accent-color: #fff; cursor: pointer; }
+.btn.small { padding: .4rem .9rem; font-size: .85rem; }
 
 /* 업로드 */
 .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 1.5rem; display: grid; gap: 1rem; }
@@ -95,7 +110,7 @@ input:focus, select:focus { outline: 2px solid var(--fg); outline-offset: -1px; 
   .row { grid-template-columns: 1fr; }
   .grid { columns: 2 140px; column-gap: .4rem; }
   .grid li { margin-bottom: .4rem; }
-  .lightbox { padding: 3rem .5rem 7rem; }
+  .lightbox { padding: 3rem .5rem 14rem; }
   .lb-nav { display: none; }
   .lb-bar { flex-direction: column; align-items: stretch; }
 }

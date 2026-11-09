@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { hasViewAccess } from "@/lib/auth";
+import { hasUploadAccess, hasViewAccess } from "@/lib/auth";
 import { getAlbumByName, listPhotos } from "@/lib/drive";
 import Locked from "@/components/Locked";
 import Gallery from "@/components/Gallery";
@@ -31,7 +31,7 @@ export default async function AlbumPage({ params }: { params: Promise<{ album: s
       {photos.length === 0 ? (
         <p className="muted empty">아직 사진이 없습니다.</p>
       ) : (
-        <Gallery photos={photos} />
+        <Gallery photos={photos} canEdit={await hasUploadAccess()} />
       )}
     </main>
   );
