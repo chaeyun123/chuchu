@@ -22,7 +22,7 @@ export default async function AlbumPage({ params }: { params: Promise<{ album: s
     <main className="wrap">
       <header className="top">
         <div>
-          <Link href="/" className="back">← 앨범 목록</Link>
+          <Link href="/" className="back">← 정원 목록</Link>
           <h1>{album.name}</h1>
           <p className="muted">사진 {photos.length}장</p>
         </div>

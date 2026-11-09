@@ -12,7 +12,7 @@ export default async function UploadPage({ searchParams }: { searchParams: Promi
     <main className="wrap narrow">
       <header className="top">
         <div>
-          <Link href="/" className="back">← 앨범 목록</Link>
+          <Link href="/" className="back">← 정원 목록</Link>
           <h1>사진 올리기</h1>
         </div>
       </header>

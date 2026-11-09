@@ -13,7 +13,7 @@ export default async function Home() {
     <main className="wrap">
       <header className="top">
         <div>
-          <h1>앨범</h1>
+          <h1>정원!!</h1>
         </div>
         <Link href="/upload" className="btn">사진 올리기</Link>
       </header>

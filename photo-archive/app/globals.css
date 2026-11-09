@@ -61,7 +61,7 @@ h1 { font-size: clamp(1.6rem, 3vw, 2.2rem); font-weight: 700; letter-spacing: -0
 /* 잠금 화면 */
 .locked { min-height: calc(100vh - 4rem); display: grid; place-content: center; text-align: center; gap: .5rem; padding: 2rem; }
 
-/* 앨범 목록 */
+/* 정원 목록 */
 .albums { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 1.6rem 1.2rem; }
 .album { display: grid; gap: .3rem; }
 .cover { aspect-ratio: 4 / 3; border-radius: var(--radius); overflow: hidden; background: var(--line); display: grid; place-items: center; }
