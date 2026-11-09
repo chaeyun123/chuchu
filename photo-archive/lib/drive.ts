@@ -222,7 +222,7 @@ function exifToIso(t?: string): string | undefined {
   return m ? `${m[1]}-${m[2]}-${m[3]}T${m[4]}:${m[5]}:${m[6]}` : undefined;
 }
 
-type FileMeta = { id: string; name: string; mimeType: string; parents?: string[]; size?: string };
+type FileMeta = { id: string; name: string; mimeType: string; parents?: string[]; size?: string; trashed?: boolean };
 
 /** 파일이 아카이브(루트 → 앨범 → 사진) 안에 있는 이미지인지 확인 */
 export async function getArchivedPhotoMeta(fileId: string): Promise<FileMeta | null> {
@@ -232,7 +232,7 @@ export async function getArchivedPhotoMeta(fileId: string): Promise<FileMeta | n
       const meta: FileMeta = await (
         await drive(`/files/${fileId}?fields=id,name,mimeType,parents,size,trashed`)
       ).json();
-      if (!meta.mimeType.startsWith("image/")) return null;
+      if (meta.trashed || !meta.mimeType.startsWith("image/")) return null;
       const albums = await listAlbums();
       const ok = meta.parents?.some((p) => albums.some((a) => a.id === p));
       return ok ? meta : null;
@@ -242,20 +242,53 @@ export async function getArchivedPhotoMeta(fileId: string): Promise<FileMeta | n
   });
 }
 
-/** 경기 정보 저장. 빈 값은 삭제(null)로 처리합니다. */
-export async function updateGameInfo(fileId: string, albumId: string, game: GameInfo): Promise<void> {
+/** 설명·경기 정보 수정. 빈 값은 삭제(null)로 처리합니다. */
+export async function updatePhotoInfo(
+  fileId: string,
+  albumId: string,
+  info: { caption?: string; game: GameInfo },
+): Promise<void> {
   await drive(`/files/${fileId}?fields=id`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       appProperties: {
-        gameDate: game.date || null,
-        opponent: game.opponent ? clipBytes(game.opponent, 100) : null,
-        result: game.result || null,
+        caption: info.caption ? clipBytes(info.caption, 110) : null,
+        gameDate: info.game.date || null,
+        opponent: info.game.opponent ? clipBytes(info.game.opponent, 100) : null,
+        result: info.game.result || null,
       },
     }),
   });
   invalidate(`photos:${albumId}`);
+}
+
+/** 사진 삭제 = 드라이브 휴지통으로 이동 (30일 안에 드라이브에서 복구 가능) */
+export async function trashPhoto(fileId: string, albumId: string): Promise<void> {
+  await drive(`/files/${fileId}?fields=id`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ trashed: true }),
+  });
+  invalidate(`photos:${albumId}`, `meta:${fileId}`);
+
+  // 대표 사진이 지워졌으면 남은 사진 중 첫 장으로 교체
+  const album = await getAlbumById(albumId);
+  if (album?.cover === fileId) {
+    const next = (await listPhotos(albumId))[0]?.id ?? null;
+    await drive(`/files/${albumId}?fields=id`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ appProperties: { cover: next } }),
+    });
+    invalidate("albums");
+  }
+}
+
+/** 사진이 들어 있는 앨범 id (아카이브 밖이면 undefined) */
+export async function albumIdOf(meta: FileMeta): Promise<string | undefined> {
+  const albums = await listAlbums();
+  return meta.parents?.find((p) => albums.some((a) => a.id === p));
 }
 
 export async function downloadFile(fileId: string): Promise<Response> {

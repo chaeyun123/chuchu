@@ -3,8 +3,8 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import sharp from "sharp";
-import { hasViewAccess } from "@/lib/auth";
-import { downloadFile, getArchivedPhotoMeta } from "@/lib/drive";
+import { hasUploadAccess, hasViewAccess } from "@/lib/auth";
+import { albumIdOf, downloadFile, getArchivedPhotoMeta, trashPhoto } from "@/lib/drive";
 
 export const maxDuration = 60;
 
@@ -70,4 +70,19 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   return new NextResponse(new Uint8Array(out), {
     headers: { "Content-Type": "image/webp", "Cache-Control": PRIVATE_CACHE },
   });
+}
+
+/** DELETE /api/photo/<id>  — 드라이브 휴지통으로 이동. 업로드 권한 필요 */
+export async function DELETE(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+  if (!(await hasUploadAccess())) return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  const { id } = await params;
+  const meta = await getArchivedPhotoMeta(id);
+  const albumId = meta && (await albumIdOf(meta));
+  if (!meta || !albumId) return NextResponse.json({ error: "사진을 찾을 수 없습니다" }, { status: 404 });
+
+  await trashPhoto(id, albumId);
+  await Promise.all(
+    WIDTHS.map((w) => fs.unlink(path.join(CACHE_DIR, `${id}-${w}.webp`)).catch(() => {})),
+  );
+  return NextResponse.json({ ok: true });
 }
