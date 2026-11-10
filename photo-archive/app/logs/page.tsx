@@ -1,22 +1,15 @@
 import Link from "next/link";
-import { hasUploadAccess, hasViewAccess } from "@/lib/auth";
+import { hasAdminAccess, hasViewAccess } from "@/lib/auth";
 import { readAccessLog } from "@/lib/drive";
 import Locked from "@/components/Locked";
+import AdminLogin from "@/components/AdminLogin";
 
 export const dynamic = "force-dynamic";
 
-// 접속 기록 보기 — 업로드 비밀번호로 로그인한 사람만
+// 접속 기록 보기 — ADMIN_PASSWORD로 확인한 관리자만
 export default async function LogsPage() {
   if (!(await hasViewAccess())) return <Locked />;
-  if (!(await hasUploadAccess())) {
-    return (
-      <main className="locked">
-        <h1>관리자만 볼 수 있어요</h1>
-        <p className="muted">‘사진 올리기’에서 업로드 비밀번호로 먼저 로그인해 주세요.</p>
-        <p><Link href="/upload" className="btn">사진 올리기로 가기</Link></p>
-      </main>
-    );
-  }
+  if (!(await hasAdminAccess())) return <AdminLogin />;
   const rows = (await readAccessLog()).reverse().slice(0, 500);
 
   return (

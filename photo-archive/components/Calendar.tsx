@@ -28,7 +28,8 @@ export default function Calendar({ month, today, days, months, canEdit, albums }
   const [y, m] = month.split("-").map(Number);
   const first = new Date(y, m - 1, 1).getDay();
   const count = new Date(y, m, 0).getDate();
-  const [selected, setSelected] = useState<string | null>(today.startsWith(month) ? today : null);
+  // 사진 있는 날을 누르면 그날 사진을 바로 크게 보기 (좌우로 넘김)
+  const [selected, setSelected] = useState<string | null>(null);
   const [touchX, setTouchX] = useState<number | null>(null);
 
   const cells: (string | null)[] = [
@@ -40,9 +41,6 @@ export default function Calendar({ month, today, days, months, canEdit, albums }
   const go = (d: number) => router.push(`/calendar?m=${shift(month, d)}`);
   const total = Object.values(days).reduce((n, l) => n + l.length, 0);
   const sel = selected ? days[selected] ?? [] : [];
-  const selLabel = selected
-    ? `${Number(selected.slice(5, 7))}월 ${Number(selected.slice(8))}일 ${WEEK[new Date(+selected.slice(0, 4), +selected.slice(5, 7) - 1, +selected.slice(8)).getDay()]}요일`
-    : "";
 
   return (
     <div className="ical">
@@ -102,7 +100,7 @@ export default function Calendar({ month, today, days, months, canEdit, albums }
             list ? "has" : "",
           ].join(" ");
           return (
-            <button key={d} className={cls} onClick={() => setSelected(d)} aria-label={`${Number(d.slice(8))}일${list ? `, 사진 ${list.length}장` : ""}`}>
+            <button key={d} className={cls} disabled={!list} onClick={() => setSelected(d)} aria-label={`${Number(d.slice(8))}일${list ? `, 사진 ${list.length}장` : ""}`}>
               <span className="ical-num">{Number(d.slice(8))}</span>
               <span className="ical-photo">
                 {list && (
@@ -118,15 +116,16 @@ export default function Calendar({ month, today, days, months, canEdit, albums }
         })}
       </div>
 
-      {selected && (
-        <section className="ical-day">
-          <h2>{selLabel}</h2>
-          {sel.length === 0 ? (
-            <p className="muted">이 날은 사진이 없어요.</p>
-          ) : (
-            <Gallery key={selected} photos={sel} canEdit={canEdit} albums={albums} />
-          )}
-        </section>
+      {selected && sel.length > 0 && (
+        <Gallery
+          key={selected}
+          photos={sel}
+          canEdit={canEdit}
+          albums={albums}
+          lightboxOnly
+          defaultSort="taken-asc"
+          onClose={() => setSelected(null)}
+        />
       )}
     </div>
   );

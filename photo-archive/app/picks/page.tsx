@@ -1,5 +1,5 @@
 import { hasUploadAccess, hasViewAccess } from "@/lib/auth";
-import { listAlbums, listAllPhotos, photoDay } from "@/lib/drive";
+import { listAlbums, listAllPhotos } from "@/lib/drive";
 import Locked from "@/components/Locked";
 import Gallery from "@/components/Gallery";
 
@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 export default async function PicksPage() {
   if (!(await hasViewAccess())) return <Locked />;
   const [all, albums, canEdit] = await Promise.all([listAllPhotos(), listAlbums(), hasUploadAccess()]);
-  const picks = all.filter((p) => p.liked).sort((a, b) => photoDay(b).localeCompare(photoDay(a)));
+  const picks = all.filter((p) => p.liked);
 
   return (
     <main className="wrap">
@@ -22,7 +22,13 @@ export default async function PicksPage() {
       {picks.length === 0 ? (
         <p className="muted empty">아직 고른 사진이 없어요.<br />사진을 크게 열고 ‘♡ 정원pick!’을 눌러 보세요.</p>
       ) : (
-        <Gallery photos={picks} canEdit={canEdit} albums={albums.map((a) => ({ id: a.id, name: a.name }))} />
+        <Gallery
+          photos={picks}
+          canEdit={canEdit}
+          albums={albums.map((a) => ({ id: a.id, name: a.name }))}
+          defaultSort="taken-desc"
+          sortKey="picks"
+        />
       )}
     </main>
   );

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { DeviceInfo, GameInfo, Photo } from "@/lib/drive";
 import { TEAMS } from "@/lib/teams";
@@ -37,13 +37,31 @@ function fmtDevice(d?: DeviceInfo): string | undefined {
 
 const RESULT_LABEL = { win: "승", lose: "패" } as const;
 
+// ── 정렬 ──
+export type SortMode = "upload-desc" | "upload-asc" | "taken-desc" | "taken-asc";
+const SORT_LABEL: Record<SortMode, string> = {
+  "upload-desc": "업로드 최신순",
+  "upload-asc": "업로드 오래된 순",
+  "taken-desc": "촬영 최신순",
+  "taken-asc": "촬영 오래된 순",
+};
+const isSort = (v: unknown): v is SortMode => typeof v === "string" && v in SORT_LABEL;
+export function sortPhotos(list: Photo[], mode: SortMode): Photo[] {
+  const key = (p: Photo) => (mode.startsWith("upload") ? p.createdTime : p.takenAt ?? p.createdTime);
+  const dir = mode.endsWith("desc") ? -1 : 1;
+  return [...list].sort((a, b) => dir * key(a).localeCompare(key(b)));
+}
+
+const UNIFORMS = ["홈", "원정", "썸머", "스페셜", "올드", "밀리터리"];
+
 function GameLine({ game }: { game: GameInfo }) {
-  if (!game.date && !game.opponent && !game.result) return null;
+  if (!game.date && !game.opponent && !game.result && !game.uniform) return null;
   return (
     <p className="lb-game">
       {game.date && <span>{game.date.replace(/-/g, ".")}</span>}
       {game.opponent && <span>NC vs ({game.opponent})</span>}
       {game.result && <span className={`result ${game.result}`}>✓ {RESULT_LABEL[game.result]}</span>}
+      {game.uniform && <span>👕 {game.uniform} 유니폼</span>}
     </p>
   );
 }
@@ -97,6 +115,7 @@ function PhotoEditor({ photo, onSaved, onCancel }: {
   const [date, setDate] = useState(photo.game.date ?? (photo.takenAt ?? "").slice(0, 10));
   const [opponent, setOpponent] = useState(photo.game.opponent ?? "");
   const [result, setResult] = useState<GameInfo["result"]>(photo.game.result);
+  const [uniform, setUniform] = useState(photo.game.uniform ?? "");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(false);
 
@@ -108,7 +127,7 @@ function PhotoEditor({ photo, onSaved, onCancel }: {
       const res = await fetch(`/api/photo/${photo.id}/info`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ caption, date, opponent, result: result ?? "" }),
+        body: JSON.stringify({ caption, date, opponent, result: result ?? "", uniform }),
       });
       if (!res.ok) throw new Error();
       onSaved(await res.json());
@@ -151,6 +170,30 @@ function PhotoEditor({ photo, onSaved, onCancel }: {
         </div>
       </div>
       <div className="edit-row">
+        <span className="vs-label">유니폼</span>
+        <div className="teams" role="group" aria-label="유니폼 종류">
+          {UNIFORMS.map((u) => (
+            <button
+              key={u}
+              type="button"
+              className={`chip ${uniform === u ? "on" : ""}`}
+              aria-pressed={uniform === u}
+              onClick={() => setUniform((cur) => (cur === u ? "" : u))}
+            >
+              {u}
+            </button>
+          ))}
+        </div>
+        <input
+          className="edit-uniform"
+          value={UNIFORMS.includes(uniform) ? "" : uniform}
+          onChange={(e) => setUniform(e.target.value)}
+          placeholder="직접 입력"
+          maxLength={20}
+          aria-label="유니폼 직접 입력"
+        />
+      </div>
+      <div className="edit-row">
         <label className="check">
           <input type="checkbox" checked={result === "win"} onChange={() => toggleResult("win")} /> 승
         </label>
@@ -171,6 +214,12 @@ export default function Gallery({
   canEdit = false,
   albums = [],
   albumId,
+  selectable = false,
+  defaultSort = "upload-desc",
+  sortKey,
+  lightboxOnly = false,
+  startIndex = 0,
+  onClose,
 }: {
   photos: Photo[];
   canEdit?: boolean;
@@ -178,10 +227,21 @@ export default function Gallery({
   albums?: AlbumRef[];
   /** 특정 앨범 페이지일 때: 다른 앨범으로 옮긴 사진은 목록에서 빠짐 */
   albumId?: string;
+  /** 여러 장 선택(삭제·이동) 버튼 표시 — 앨범 페이지에서만 */
+  selectable?: boolean;
+  defaultSort?: SortMode;
+  /** 있으면 정렬 선택을 이 이름으로 브라우저에 기억 */
+  sortKey?: string;
+  /** 목록 없이 크게 보기만 (캘린더용) */
+  lightboxOnly?: boolean;
+  startIndex?: number;
+  onClose?: () => void;
 }) {
   const router = useRouter();
   const [photos, setPhotos] = useState(initial);
-  const [open, setOpen] = useState<number | null>(null);
+  const [open, setOpen] = useState<number | null>(lightboxOnly ? startIndex : null);
+  const [sort, setSort] = useState<SortMode>(defaultSort);
+  const view = useMemo(() => sortPhotos(photos, sort), [photos, sort]);
   const [panel, setPanel] = useState<"none" | "edit" | "move">("none");
   const [busy, setBusy] = useState(false);
   // 여러 장 선택 모드
@@ -191,19 +251,33 @@ export default function Gallery({
 
   useEffect(() => setPhotos(initial), [initial]);
 
+  // 기억해 둔 정렬 불러오기
+  useEffect(() => {
+    if (!sortKey) return;
+    try {
+      const v = localStorage.getItem(`pa_sort:${sortKey}`);
+      if (isSort(v)) setSort(v);
+    } catch {}
+  }, [sortKey]);
+  function changeSort(v: SortMode) {
+    setSort(v);
+    if (sortKey) try { localStorage.setItem(`pa_sort:${sortKey}`, v); } catch {}
+  }
+
   const albumName = (id: string) => albums.find((a) => a.id === id)?.name;
   const editing = panel !== "none";
 
   const close = useCallback(() => {
     setOpen(null);
     setPanel("none");
-  }, []);
+    onClose?.();
+  }, [onClose]);
   const move = useCallback(
     (d: number) => {
       setPanel("none");
-      setOpen((i) => (i === null ? i : (i + d + photos.length) % photos.length));
+      setOpen((i) => (i === null ? i : (i + d + view.length) % view.length));
     },
-    [photos.length],
+    [view.length],
   );
 
   useEffect(() => {
@@ -226,18 +300,18 @@ export default function Gallery({
 
   // 다음/이전 사진 미리 불러오기
   useEffect(() => {
-    if (open === null || photos.length < 2) return;
+    if (open === null || view.length < 2) return;
     for (const d of [1, -1]) {
-      const p = photos[(open + d + photos.length) % photos.length];
+      const p = view[(open + d + view.length) % view.length];
       const img = new Image();
       img.src = `/api/photo/${p.id}?w=1600`;
     }
-  }, [open, photos]);
+  }, [open, view]);
 
   // 모바일 스와이프
   const [touchX, setTouchX] = useState<number | null>(null);
 
-  const current = open !== null ? photos[open] : null;
+  const current = open !== null ? view[open] ?? null : null;
   const device = fmtDevice(current?.device);
 
   /** 삭제·이동 후 화면 정리 */
@@ -250,7 +324,8 @@ export default function Gallery({
       : photos.map((p) => (gone.has(p.id) ? { ...p, albumId: to! } : p));
     setPhotos(rest);
     if (open !== null && leaves && curId && gone.has(curId)) {
-      setOpen(rest.length ? Math.min(open, rest.length - 1) : null);
+      if (rest.length) setOpen(Math.min(open, rest.length - 1));
+      else close();
     }
     setPanel("none");
     router.refresh(); // 사진 개수·대표 사진 갱신
@@ -320,20 +395,28 @@ export default function Gallery({
 
   return (
     <>
-      {canEdit && (
+      {!lightboxOnly && (
         <div className={`select-bar ${selecting ? "on" : ""}`}>
           {!selecting ? (
-            <button className="btn ghost small" onClick={() => setSelecting(true)}>선택</button>
+            <>
+              <select className="sort-select" value={sort} onChange={(e) => changeSort(e.target.value as SortMode)} aria-label="정렬">
+                {(Object.keys(SORT_LABEL) as SortMode[]).map((k) => <option key={k} value={k}>{SORT_LABEL[k]}</option>)}
+              </select>
+              <span className="spacer" />
+              {canEdit && selectable && (
+                <button className="btn ghost small" onClick={() => setSelecting(true)}>선택</button>
+              )}
+            </>
           ) : (
             <>
               <span className="select-count">{selected.size}장 선택됨</span>
               <button
                 className="btn ghost small"
                 onClick={() =>
-                  setSelected(selected.size === photos.length ? new Set() : new Set(photos.map((p) => p.id)))
+                  setSelected(selected.size === view.length ? new Set() : new Set(view.map((p) => p.id)))
                 }
               >
-                {selected.size === photos.length ? "선택 해제" : "전체 선택"}
+                {selected.size === view.length ? "선택 해제" : "전체 선택"}
               </button>
               <span className="spacer" />
               {bulkMove ? (
@@ -362,8 +445,8 @@ export default function Gallery({
         </div>
       )}
 
-      <ul className="grid">
-        {photos.map((p, i) => {
+      {!lightboxOnly && <ul className="grid">
+        {view.map((p, i) => {
           const isSel = selected.has(p.id);
           return (
             <li key={p.id}>
@@ -387,7 +470,7 @@ export default function Gallery({
             </li>
           );
         })}
-      </ul>
+      </ul>}
 
       {current && (
         <div
@@ -408,12 +491,12 @@ export default function Gallery({
           <button className="lb-close" onClick={close} aria-label="닫기">×</button>
 
           <div className="lb-stage" onClick={(e) => e.target === e.currentTarget && close()}>
-            {photos.length > 1 && (
+            {view.length > 1 && (
               <button className="lb-nav lb-prev" onClick={() => move(-1)} aria-label="이전">‹</button>
             )}
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img key={current.id} src={`/api/photo/${current.id}?w=1600`} alt={current.caption || current.name} />
-            {photos.length > 1 && (
+            {view.length > 1 && (
               <button className="lb-nav lb-next" onClick={() => move(1)} aria-label="다음">›</button>
             )}
           </div>
@@ -438,7 +521,7 @@ export default function Gallery({
                     {fmtDate(current)}
                     {current.uploader && ` · ${current.uploader}`}
                     {albumId === undefined && albumName(current.albumId) && ` · 📁 ${albumName(current.albumId)}`}
-                    {" · "}{open! + 1}/{photos.length}
+                    {" · "}{open! + 1}/{view.length}
                   </p>
                   {device && <p className="lb-meta lb-device">📷 {device}</p>}
                 </div>

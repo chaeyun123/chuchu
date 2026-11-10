@@ -5,12 +5,16 @@ import { env } from "./env";
 
 export const VIEW_COOKIE = "pa_view";
 export const UPLOAD_COOKIE = "pa_upload";
+export const ADMIN_COOKIE = "pa_admin";
 // 브라우저가 허용하는 최대치(약 400일). 다시 로그인하면 갱신됩니다.
 export const COOKIE_MAX_AGE = 400 * 24 * 60 * 60;
 
-function sign(kind: "view" | "upload"): string {
+function sign(kind: "view" | "upload" | "admin"): string {
   // 아이디/비밀번호가 바뀌면 기존 쿠키는 자동으로 무효가 됩니다(모두 다시 로그인).
-  const secret = kind === "view" ? `${env.siteId}:${env.sitePassword}` : env.uploadPassword;
+  const secret =
+    kind === "view" ? `${env.siteId}:${env.sitePassword}` :
+    kind === "upload" ? env.uploadPassword :
+    env.adminPassword;
   return crypto
     .createHmac("sha256", env.cookieSecret)
     .update(`${kind}:${secret}`)
@@ -25,6 +29,7 @@ export function safeEqual(a: string, b: string): boolean {
 
 export const viewCookieValue = () => sign("view");
 export const uploadCookieValue = () => sign("upload");
+export const adminCookieValue = () => sign("admin");
 
 export async function hasViewAccess(): Promise<boolean> {
   const v = (await cookies()).get(VIEW_COOKIE)?.value;
@@ -34,6 +39,12 @@ export async function hasViewAccess(): Promise<boolean> {
 export async function hasUploadAccess(): Promise<boolean> {
   const v = (await cookies()).get(UPLOAD_COOKIE)?.value;
   return !!v && safeEqual(v, sign("upload")) && (await hasViewAccess());
+}
+
+/** 관리자(접속 기록 보기) — ADMIN_PASSWORD를 아는 사람만 */
+export async function hasAdminAccess(): Promise<boolean> {
+  const v = (await cookies()).get(ADMIN_COOKIE)?.value;
+  return !!v && safeEqual(v, sign("admin")) && (await hasViewAccess());
 }
 
 export const cookieOptions = {

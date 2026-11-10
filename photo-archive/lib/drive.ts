@@ -6,7 +6,7 @@ import { env } from "./env";
  * Google Drive = DB
  *   루트 폴더 (DRIVE_ROOT_FOLDER_ID)
  *     └ 앨범 폴더 (폴더명 = 앨범명 = URL)    appProperties: { cover }
- *         └ 사진 파일 (원본 그대로)          appProperties: { caption, uploader, gameDate, opponent, result, liked }
+ *         └ 사진 파일 (원본 그대로)          appProperties: { caption, uploader, gameDate, opponent, result, uniform, liked }
  *                                           + 드라이브가 자동 추출한 imageMediaMetadata
  */
 
@@ -54,6 +54,7 @@ export type GameResult = "win" | "lose";
 export type GameInfo = {
   date?: string; // YYYY-MM-DD
   opponent?: string; // NC vs (opponent)
+  uniform?: string; // 유니폼 종류 (홈, 원정 등 자유 입력)
   result?: GameResult;
 };
 
@@ -208,6 +209,7 @@ export function listPhotos(albumId: string): Promise<Photo[]> {
         game: {
           date: ap.gameDate || undefined,
           opponent: ap.opponent || undefined,
+          uniform: ap.uniform || undefined,
           result: ap.result === "win" || ap.result === "lose" ? ap.result : undefined,
         },
         liked: ap.liked === "1",
@@ -260,6 +262,7 @@ export async function updatePhotoInfo(
         caption: info.caption ? clipBytes(info.caption, 110) : null,
         gameDate: info.game.date || null,
         opponent: info.game.opponent ? clipBytes(info.game.opponent, 100) : null,
+        uniform: info.game.uniform ? clipBytes(info.game.uniform, 100) : null,
         result: info.game.result || null,
       },
     }),

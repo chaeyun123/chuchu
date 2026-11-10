@@ -70,6 +70,9 @@ h1 { font-size: clamp(1.6rem, 3vw, 2.2rem); font-weight: 700; letter-spacing: -0
 .login { width: min(360px, calc(100vw - 2rem)); text-align: left; }
 .login h1 { margin: 0; }
 .top-actions { display: flex; gap: .5rem; flex-wrap: wrap; }
+.top.compact { align-items: center; margin-bottom: 1.2rem; }
+.sort-select { font-size: .88rem; padding: .45rem .7rem; border-radius: 999px; background: var(--card); }
+.edit-uniform { width: 7.5rem; }
 
 /* 정원 목록 */
 .albums { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 1.6rem 1.2rem; }
@@ -220,8 +223,7 @@ input:focus, select:focus { outline: 2px solid var(--fg); outline-offset: -1px; 
   position: absolute; right: 3px; bottom: 3px; min-width: 1.15rem; padding: 0 .3rem; border-radius: 999px;
   background: rgba(0, 0, 0, .6); color: #fff; font-size: .68rem; font-weight: 700; line-height: 1.15rem;
 }
-.ical-day { margin-top: 1.5rem; padding-top: 1.2rem; border-top: 1px solid var(--line); }
-.ical-day h2 { font-size: 1.1rem; margin: 0 0 1rem; }
+.ical-cell:disabled { cursor: default; }
 
 @media (max-width: 640px) {
   .ical-photo { border-radius: 5px; }

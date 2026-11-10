@@ -39,6 +39,9 @@ export default async function AlbumPage({ params }: { params: Promise<{ album: s
           photos={photos}
           canEdit={canEdit}
           albumId={album.id}
+          selectable
+          defaultSort="taken-asc"
+          sortKey="album"
           albums={albums.map((a) => ({ id: a.id, name: a.name }))}
         />
       )}
