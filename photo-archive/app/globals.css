@@ -73,6 +73,14 @@ h1 { font-size: clamp(1.6rem, 3vw, 2.2rem); font-weight: 700; letter-spacing: -0
 .top.compact { align-items: center; margin-bottom: 1.2rem; }
 .sort-select { font-size: .88rem; padding: .45rem .7rem; border-radius: 999px; background: var(--card); }
 .edit-uniform { width: 7.5rem; }
+.new-album { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; }
+.new-album input { font-size: .92rem; padding: .55rem .8rem; border-radius: 999px; width: min(16rem, 100%); }
+.new-album-error { flex-basis: 100%; }
+.album-title { display: flex; align-items: center; gap: .4rem; }
+.rename-btn { border: 0; background: none; color: var(--muted); font-size: 1.2rem; cursor: pointer; padding: .2rem .4rem; border-radius: 6px; }
+.rename-btn:hover { color: var(--fg); background: var(--line); }
+.rename-form { margin: .3rem 0; }
+.rename-form input { font-size: 1.1rem; font-weight: 600; width: min(20rem, 100%); }
 
 /* 정원 목록 */
 .albums { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 1.6rem 1.2rem; }

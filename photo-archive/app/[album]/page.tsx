@@ -5,6 +5,7 @@ import { getAlbumByName, listAlbums, listPhotos } from "@/lib/drive";
 import Locked from "@/components/Locked";
 import Gallery from "@/components/Gallery";
 import AlbumDelete from "@/components/AlbumDelete";
+import AlbumTitle from "@/components/AlbumTitle";
 
 export const dynamic = "force-dynamic";
 
@@ -24,7 +25,7 @@ export default async function AlbumPage({ params }: { params: Promise<{ album: s
       <header className="top">
         <div>
           <Link href="/albums" className="back">← 앨범 목록</Link>
-          <h1>{album.name}</h1>
+          <AlbumTitle key={album.id + album.name} id={album.id} name={album.name} canEdit={canEdit} />
           <p className="muted">사진 {photos.length}장</p>
         </div>
         <div className="top-actions">

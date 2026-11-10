@@ -55,6 +55,15 @@ export const cookieOptions = {
   maxAge: COOKIE_MAX_AGE,
 };
 
+/** 앨범 이름 정리·검사. 올바르면 정리된 이름, 아니면 null */
+export function cleanAlbumName(raw: unknown): string | null {
+  const name = typeof raw === "string" ? raw.trim().normalize("NFC") : "";
+  if (!name || name.length > 100 || /[\/\\?#%]/.test(name) || RESERVED_NAMES.has(name.toLowerCase())) return null;
+  return name;
+}
+export const ALBUM_NAME_ERROR =
+  "앨범 이름은 1~100자이고 / \\ ? # % 와 예약어(api, upload, albums, calendar, picks 등)는 쓸 수 없습니다";
+
 export const RESERVED_NAMES = new Set([
   "api", "s", "upload", "logs", "albums", "calendar", "picks", "_next", "favicon.ico", "robots.txt",
 ]);

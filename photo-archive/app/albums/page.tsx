@@ -1,7 +1,8 @@
 import Link from "next/link";
-import { hasViewAccess } from "@/lib/auth";
+import { hasUploadAccess, hasViewAccess } from "@/lib/auth";
 import { listAlbums, listPhotos, type Album } from "@/lib/drive";
 import Locked from "@/components/Locked";
+import NewAlbum from "@/components/NewAlbum";
 
 export const dynamic = "force-dynamic";
 
@@ -19,7 +20,10 @@ async function preview(album: Album) {
 
 export default async function AlbumsPage() {
   if (!(await hasViewAccess())) return <Locked />;
-  const albums = await Promise.all((await listAlbums()).map(preview));
+  const [albums, canEdit] = await Promise.all([
+    listAlbums().then((list) => Promise.all(list.map(preview))),
+    hasUploadAccess(),
+  ]);
 
   return (
     <main className="wrap">
@@ -28,7 +32,15 @@ export default async function AlbumsPage() {
           <h1>앨범</h1>
           <p className="muted">{albums.length}개</p>
         </div>
-        <Link href="/upload" className="btn">사진 올리기</Link>
+        <div className="top-actions">
+          {canEdit ? (
+            <NewAlbum />
+          ) : (
+            // 업로드 비밀번호 로그인 전: 업로드 화면에서 로그인 후 만들 수 있음
+            <Link href="/upload" className="btn ghost">+ 새 앨범</Link>
+          )}
+          <Link href="/upload" className="btn">사진 올리기</Link>
+        </div>
       </header>
 
       {albums.length === 0 ? (

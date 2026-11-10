@@ -151,6 +151,16 @@ export async function createAlbum(name: string): Promise<Album> {
   return res.json();
 }
 
+/** 앨범(폴더) 이름 바꾸기 — 앨범 주소도 새 이름으로 바뀝니다 */
+export async function renameAlbum(albumId: string, name: string): Promise<void> {
+  await drive(`/files/${albumId}?fields=id`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name }),
+  });
+  invalidate("albums");
+}
+
 async function setAlbumCoverIfEmpty(albumId: string, photoId: string) {
   const album = await getAlbumById(albumId);
   if (!album || album.cover) return;
