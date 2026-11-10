@@ -5,12 +5,12 @@ import { env } from "./env";
 
 export const VIEW_COOKIE = "pa_view";
 export const UPLOAD_COOKIE = "pa_upload";
-// 브라우저가 허용하는 최대치(약 400일). 공유 링크를 다시 열면 언제든 갱신됩니다.
+// 브라우저가 허용하는 최대치(약 400일). 다시 로그인하면 갱신됩니다.
 export const COOKIE_MAX_AGE = 400 * 24 * 60 * 60;
 
 function sign(kind: "view" | "upload"): string {
-  // 토큰/비밀번호가 바뀌면 기존 쿠키는 자동으로 무효가 됩니다.
-  const secret = kind === "view" ? env.siteToken : env.uploadPassword;
+  // 아이디/비밀번호가 바뀌면 기존 쿠키는 자동으로 무효가 됩니다(모두 다시 로그인).
+  const secret = kind === "view" ? `${env.siteId}:${env.sitePassword}` : env.uploadPassword;
   return crypto
     .createHmac("sha256", env.cookieSecret)
     .update(`${kind}:${secret}`)
@@ -45,5 +45,5 @@ export const cookieOptions = {
 };
 
 export const RESERVED_NAMES = new Set([
-  "api", "s", "upload", "_next", "favicon.ico", "robots.txt",
+  "api", "s", "upload", "logs", "_next", "favicon.ico", "robots.txt",
 ]);

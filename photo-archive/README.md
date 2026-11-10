@@ -2,8 +2,9 @@
 
 Google Drive를 저장소 겸 DB로 쓰는 비공개 사진 아카이브입니다. **링크를 받은 사람만** 볼 수 있습니다.
 
-- 공유 링크 하나(`https://내사이트/s/<SITE_TOKEN>`)로 접속하면 앨범 목록이 열리고, 앨범을 누르면 `https://내사이트/앨범명` 주소로 이동합니다.
-- 링크는 만료되지 않습니다. 접속 쿠키는 약 400일 유지되고, 링크를 다시 열면 갱신됩니다.
+- 사이트에 들어오면 먼저 **아이디/비밀번호**(`SITE_ID` / `SITE_PASSWORD`)를 입력해야 합니다. 주소가 공개된 곳에 올라가도 비밀번호 없이는 볼 수 없습니다.
+- 로그인은 약 400일 유지됩니다. 앨범을 누르면 `https://내사이트/앨범명` 주소로 이동합니다.
+- 로그인 성공/실패와 방문(탭을 열 때마다 1번)은 드라이브 루트 폴더의 `접속기록.csv`에 남고, 업로드 비밀번호로 로그인한 사람은 `/logs` 페이지에서 볼 수 있습니다.
 - 웹에서 업로드하면 드라이브에 저장됩니다(업로드 비밀번호 필요).
 - 원본 다운로드를 지원합니다.
 
@@ -59,7 +60,7 @@ node -e "console.log(require('crypto').randomBytes(24).toString('base64url'))"
 
 | 변수 | 설명 |
 |---|---|
-| `SITE_TOKEN` | 공유 링크 비밀값. 공유 링크는 `/s/<이 값>` |
+| `SITE_ID` / `SITE_PASSWORD` | 사이트 입장용 아이디와 비밀번호 |
 | `UPLOAD_PASSWORD` | 업로드 비밀번호. 사진을 올릴 사람에게만 알려줍니다 |
 | `COOKIE_SECRET` | 쿠키 서명용 |
 
@@ -67,14 +68,14 @@ node -e "console.log(require('crypto').randomBytes(24).toString('base64url'))"
 
 ```bash
 npm run dev
-# 브라우저에서 http://localhost:3000/s/<SITE_TOKEN>
+# 브라우저에서 http://localhost:3000 → 아이디/비밀번호 입력
 ```
 
 ### 4. 배포 (Vercel 추천)
 
 1. GitHub에 올립니다. `.env.local`은 `.gitignore`에 들어 있어 올라가지 않습니다.
-2. https://vercel.com 에서 저장소를 Import하고, **Environment Variables**에 `.env.local`의 7개 값을 넣습니다.
-3. 배포가 끝나면 `https://<도메인>/s/<SITE_TOKEN>` 링크를 공유하면 됩니다.
+2. https://vercel.com 에서 저장소를 Import하고, **Environment Variables**에 `.env.local`의 8개 값을 넣습니다.
+3. 배포가 끝나면 `https://<도메인>` 주소와 아이디/비밀번호를 알려주면 됩니다.
 
 > 직접 서버(`npm run build && npm start`)에서 돌릴 때는 HTTPS가 필요합니다. 쿠키에 Secure 속성이 붙기 때문입니다. localhost는 예외입니다.
 
@@ -82,7 +83,7 @@ npm run dev
 
 ## 알아두면 좋은 점
 
-- **링크를 바꾸고 싶을 때**: `SITE_TOKEN`을 새 값으로 바꾸면 기존 링크와 접속 쿠키가 모두 무효가 됩니다. `UPLOAD_PASSWORD`도 같은 방식으로 동작합니다.
+- **비밀번호를 바꾸고 싶을 때**: `SITE_ID`나 `SITE_PASSWORD`를 바꾸면 기존 로그인이 모두 풀립니다. `UPLOAD_PASSWORD`도 같은 방식으로 동작합니다.
 - **사진 삭제나 이름 변경**: 구글 드라이브에서 직접 하면 됩니다. 사이트에는 1분 안에 반영됩니다.
 - **드라이브에 직접 넣은 사진은 보이지 않습니다.** `drive.file` 권한은 이 앱이 만든 파일만 볼 수 있어서, 사진은 반드시 웹 업로드로 올려야 합니다. 대신 이 권한 덕분에 앱이 내 드라이브의 다른 파일에는 접근할 수 없습니다.
 - **썸네일**: 서버가 원본을 줄여 WebP로 보여줍니다. 이 과정에서 위치정보 같은 EXIF가 제거됩니다. 원본 다운로드는 파일을 그대로 주므로 EXIF가 남아 있습니다.

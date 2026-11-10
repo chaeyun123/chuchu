@@ -9,7 +9,8 @@ export const env = {
   get clientSecret() { return req("GOOGLE_CLIENT_SECRET"); },
   get refreshToken() { return req("GOOGLE_REFRESH_TOKEN"); },
   get rootFolderId() { return req("DRIVE_ROOT_FOLDER_ID"); },
-  get siteToken() { return req("SITE_TOKEN"); },
+  get siteId() { return req("SITE_ID"); },
+  get sitePassword() { return req("SITE_PASSWORD"); },
   get uploadPassword() { return req("UPLOAD_PASSWORD"); },
   get cookieSecret() { return req("COOKIE_SECRET"); },
 };

@@ -377,3 +377,65 @@ function clipBytes(s: string, max: number): string {
   }
   return out;
 }
+
+// ── 접속 기록 (루트 폴더의 CSV 파일 하나) ──────────────────
+// 드라이브에서 바로 열어 볼 수 있고, /logs 페이지에서도 볼 수 있습니다.
+const LOG_NAME = "접속기록.csv";
+export const LOG_COLUMNS = ["시간(KST)", "구분", "아이디", "페이지", "IP", "위치", "기기", "User-Agent"];
+let logFileId: string | null = null;
+let logQueue: Promise<unknown> = Promise.resolve();
+
+function csvCell(v: string): string {
+  let s = v.replace(/[\r\n]+/g, " ");
+  if (/^[=+\-@\t]/.test(s)) s = `'${s}`; // 엑셀/시트에서 수식으로 실행되지 않도록
+  return `"${s.replace(/"/g, '""')}"`;
+}
+
+async function logFile(create: boolean): Promise<string | null> {
+  if (logFileId) return logFileId;
+  const [found] = await listAll<{ id: string }>(
+    `'${q(env.rootFolderId)}' in parents and name='${q(LOG_NAME)}' and trashed=false`,
+    "id",
+  );
+  if (found) return (logFileId = found.id);
+  if (!create) return null;
+  const res = await drive(`/files?fields=id`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name: LOG_NAME, mimeType: "text/csv", parents: [env.rootFolderId] }),
+  });
+  return (logFileId = (await res.json()).id as string);
+}
+
+async function readLogText(id: string): Promise<string> {
+  return (await drive(`/files/${id}?alt=media`)).text();
+}
+
+/** 한 줄 추가. 같은 서버 안에서는 순서대로 처리해 기록이 덮어써지지 않게 합니다. */
+export function appendAccessLog(row: string[]): Promise<void> {
+  const run = logQueue.then(async () => {
+    const id = (await logFile(true))!;
+    let text = await readLogText(id);
+    // BOM: 엑셀에서 한글이 깨지지 않도록
+    if (!text) text = "﻿" + LOG_COLUMNS.map(csvCell).join(",") + "\n";
+    text += row.map(csvCell).join(",") + "\n";
+    const res = await fetch(`${UPLOAD_API}/${id}?uploadType=media&fields=id`, {
+      method: "PATCH",
+      headers: { Authorization: `Bearer ${await accessToken()}`, "Content-Type": "text/csv; charset=UTF-8" },
+      body: text,
+    });
+    if (!res.ok) throw new Error(`접속 기록 저장 실패 ${res.status}: ${await res.text()}`);
+  });
+  logQueue = run.catch(() => {});
+  return run;
+}
+
+/** 접속 기록 전체 (오래된 순). 헤더 줄은 빠집니다. */
+export async function readAccessLog(): Promise<string[][]> {
+  const id = await logFile(false);
+  if (!id) return [];
+  const lines = (await readLogText(id)).replace(/^﻿/, "").split("\n").filter(Boolean);
+  return lines.slice(1).map((line) =>
+    [...line.matchAll(/"((?:[^"]|"")*)"/g)].map((m) => m[1].replace(/""/g, '"')),
+  );
+}
