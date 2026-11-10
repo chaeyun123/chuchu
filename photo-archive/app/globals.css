@@ -1,4 +1,4 @@
-/* ── 정원 테마 ── 이끼·잎사귀 초록 + 햇살 크림 */
+/* ── 정원 테마 ── 초록 + 크림, 배경은 단색 */
 :root {
   --bg: #eef2e4;
   --fg: #1f2b20;
@@ -16,11 +16,6 @@
 body {
   margin: 0; color: var(--fg); -webkit-font-smoothing: antialiased; min-height: 100vh;
   background-color: var(--bg);
-  background-image:
-    radial-gradient(ellipse 60% 45% at 85% 0%, rgba(246, 239, 207, .9), transparent 70%),
-    radial-gradient(ellipse 50% 40% at 0% 100%, rgba(167, 196, 140, .35), transparent 70%),
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140' viewBox='0 0 140 140'%3E%3Cg fill='%234f7d4a' fill-opacity='.07'%3E%3Cpath d='M30 20c14 2 22 12 20 28-14-2-22-12-20-28z'/%3E%3Cpath d='M100 70c-4 13-15 19-30 15 4-13 15-19 30-15z'/%3E%3Cpath d='M40 105c11 6 14 18 7 31-11-6-14-18-7-31z'/%3E%3Ccircle cx='115' cy='25' r='3'/%3E%3Ccircle cx='12' cy='75' r='2'/%3E%3C/g%3E%3C/svg%3E");
-  background-attachment: fixed;
 }
 a { color: inherit; text-decoration: none; }
 h1 { font-size: clamp(1.6rem, 3vw, 2.2rem); font-weight: 700; letter-spacing: -0.02em; margin: 0.2rem 0; }
@@ -45,18 +40,30 @@ h1 { font-size: clamp(1.6rem, 3vw, 2.2rem); font-weight: 700; letter-spacing: -0
 .btn.ghost { background: transparent; color: var(--fg); border: 1px solid var(--line); }
 .btn.light { background: #fff; color: #111; }
 
-/* 상단 배너 */
+/* 상단 메뉴 */
 .banner {
-  background: linear-gradient(135deg, #24452b 0%, #2f5a37 55%, #4f7d4a 100%);
-  border-bottom: 4px solid #a7c48c;
+  position: sticky; top: 0; z-index: 40;
+  background: var(--accent);
   box-shadow: 0 2px 12px rgba(31, 43, 32, .15);
 }
-.banner-title {
-  display: flex; align-items: center; gap: .55rem;
-  max-width: 1280px; margin: 0 auto; padding: 1.1rem clamp(1rem, 4vw, 2.5rem);
-  color: var(--sun); font-size: 1.2rem; font-weight: 700; letter-spacing: -0.01em;
+.nav {
+  display: flex; gap: .25rem; max-width: 1280px; margin: 0 auto;
+  padding: .55rem clamp(.5rem, 4vw, 2.5rem); overflow-x: auto;
 }
-.banner-title::before { content: "🌿"; font-size: 1.1rem; }
+.nav a {
+  flex: none; padding: .5rem .95rem; border-radius: 999px;
+  color: rgba(246, 239, 207, .75); font-weight: 600; font-size: .95rem; white-space: nowrap;
+  transition: background .15s, color .15s;
+}
+.nav a:hover { color: var(--sun); background: rgba(255, 255, 255, .08); }
+.nav a.on { color: var(--accent); background: var(--sun); }
+
+/* 홈 섹션 */
+.section { margin-bottom: 3rem; }
+.section-head { display: flex; justify-content: space-between; align-items: baseline; gap: 1rem; margin-bottom: 1rem; }
+.section-head h2 { margin: 0; font-size: 1.25rem; }
+.more-link { color: var(--muted); font-size: .9rem; font-weight: 600; }
+.more-link:hover { color: var(--fg); }
 
 /* 잠금 화면 */
 .locked { min-height: calc(100vh - 4rem); display: grid; place-content: center; text-align: center; gap: .5rem; padding: 2rem 1rem; }
@@ -91,9 +98,32 @@ h1 { font-size: clamp(1.6rem, 3vw, 2.2rem); font-weight: 700; letter-spacing: -0
 /* 사진 그리드 (masonry) */
 .grid { list-style: none; padding: 0; margin: 0; columns: 4 240px; column-gap: .6rem; }
 .grid li { break-inside: avoid; margin-bottom: .6rem; }
-.thumb { display: block; width: 100%; padding: 0; border: 0; background: var(--line); border-radius: 6px; overflow: hidden; cursor: zoom-in; }
+.thumb { position: relative; display: block; width: 100%; padding: 0; border: 0; background: var(--line); border-radius: 6px; overflow: hidden; cursor: zoom-in; }
 .thumb img { display: block; width: 100%; height: auto; transition: opacity .2s; }
 .thumb:hover img { opacity: .88; }
+.thumb-heart { position: absolute; top: .4rem; right: .5rem; color: #ff5a6e; font-size: 1.1rem; text-shadow: 0 1px 4px rgba(0, 0, 0, .45); pointer-events: none; }
+.thumb-check {
+  position: absolute; top: .45rem; left: .45rem; width: 1.5rem; height: 1.5rem; border-radius: 50%;
+  border: 2px solid #fff; background: rgba(0, 0, 0, .25); color: #fff; font-size: .85rem; font-weight: 700;
+  display: grid; place-items: center; box-shadow: 0 1px 4px rgba(0, 0, 0, .3);
+}
+.thumb.selecting { cursor: pointer; }
+.thumb.selected img { opacity: .6; }
+.thumb.selected .thumb-check { background: var(--accent); }
+
+/* 선택 모드 도구줄 */
+.select-bar { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; margin-bottom: 1rem; }
+.select-bar.on {
+  position: sticky; top: 3.6rem; z-index: 30; padding: .6rem .8rem;
+  background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: 0 4px 16px rgba(31, 43, 32, .08);
+}
+.select-count { font-weight: 700; }
+.move-picker { display: inline-flex; flex-wrap: wrap; align-items: center; gap: .4rem; }
+.move-picker select { font-size: .88rem; padding: .4rem .6rem; max-width: 12rem; }
+.move-picker select.dark { background: rgba(255, 255, 255, .1); color: #fff; border-color: rgba(255, 255, 255, .25); color-scheme: dark; }
+.btn.like { background: transparent; color: #fff; border: 1px solid rgba(255, 255, 255, .35); }
+.btn.like.on { background: #ff5a6e; border-color: #ff5a6e; }
+.danger-text { color: #b3261e; }
 
 /* 라이트박스: 위 = 사진 영역(남는 높이 전부), 아래 = 정보 바 */
 .lightbox { position: fixed; inset: 0; z-index: 50; background: rgba(14, 22, 16, .96); display: flex; flex-direction: column; }
@@ -155,7 +185,48 @@ input:focus, select:focus { outline: 2px solid var(--fg); outline-offset: -1px; 
 .error.small { grid-column: 1 / -1; font-size: .8rem; }
 .msg { margin: 0; font-size: .92rem; }
 
+/* 캘린더 (아이폰 캘린더 모양) */
+.ical { --red: #ff3b30; }
+.ical-top { display: flex; justify-content: space-between; align-items: center; gap: .5rem; flex-wrap: wrap; }
+.ical-top-right { display: flex; align-items: center; gap: .9rem; }
+.ical-red { color: var(--red); font-size: 1.05rem; font-weight: 500; }
+.ical-red:hover { opacity: .7; }
+.ical-jump { font-size: .85rem; padding: .3rem .5rem; color: var(--red); border-color: var(--line); background: var(--card); }
+.ical-title { font-size: clamp(2.2rem, 7vw, 2.8rem); font-weight: 800; margin: .8rem 0 0; letter-spacing: -0.03em; }
+.ical-year { font-size: 1.1rem; font-weight: 600; color: var(--red); margin-left: .2rem; }
+.ical-sub { font-size: .85rem; margin-bottom: 1rem; }
+.ical-week { display: grid; grid-template-columns: repeat(7, 1fr); font-size: .75rem; font-weight: 600; text-align: center; padding-bottom: .4rem; }
+.ical-week .weekend { color: var(--muted); }
+.ical-grid { display: grid; grid-template-columns: repeat(7, 1fr); touch-action: pan-y; }
+.ical-cell {
+  display: flex; flex-direction: column; align-items: center; gap: .25rem; min-width: 0;
+  padding: .35rem .15rem .5rem; border: 0; border-top: 1px solid var(--line); background: none;
+  font: inherit; color: var(--fg); cursor: pointer;
+}
+.ical-cell.empty { cursor: default; }
+.ical-cell.weekend .ical-num { color: var(--muted); }
+.ical-num {
+  width: 1.9rem; height: 1.9rem; border-radius: 50%; display: grid; place-items: center;
+  font-size: 1.05rem; font-weight: 500;
+}
+.ical-cell.today .ical-num { color: var(--red); font-weight: 700; }
+.ical-cell.selected .ical-num { background: var(--fg); color: #fff; font-weight: 700; }
+.ical-cell.today.selected .ical-num { background: var(--red); color: #fff; }
+.ical-photo { position: relative; width: 100%; aspect-ratio: 1; border-radius: 8px; overflow: hidden; }
+.ical-cell.has .ical-photo { box-shadow: 0 1px 4px rgba(31, 43, 32, .2); }
+.ical-photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.ical-cell.has:hover img { opacity: .85; }
+.ical-count {
+  position: absolute; right: 3px; bottom: 3px; min-width: 1.15rem; padding: 0 .3rem; border-radius: 999px;
+  background: rgba(0, 0, 0, .6); color: #fff; font-size: .68rem; font-weight: 700; line-height: 1.15rem;
+}
+.ical-day { margin-top: 1.5rem; padding-top: 1.2rem; border-top: 1px solid var(--line); }
+.ical-day h2 { font-size: 1.1rem; margin: 0 0 1rem; }
+
 @media (max-width: 640px) {
+  .ical-photo { border-radius: 5px; }
+  .ical-num { width: 1.6rem; height: 1.6rem; font-size: .95rem; }
+  .select-bar.on { top: 3.4rem; }
   .row { grid-template-columns: 1fr; }
   .grid { columns: 2 140px; column-gap: .4rem; }
   .grid li { margin-bottom: .4rem; }

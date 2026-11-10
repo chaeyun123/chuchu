@@ -1,15 +1,13 @@
 import { NextResponse } from "next/server";
 import fs from "node:fs/promises";
-import os from "node:os";
 import path from "node:path";
 import sharp from "sharp";
 import { hasUploadAccess, hasViewAccess } from "@/lib/auth";
 import { albumIdOf, downloadFile, getArchivedPhotoMeta, trashPhoto } from "@/lib/drive";
+import { CACHE_DIR, WIDTHS, clearThumbs } from "@/lib/thumbs";
 
 export const maxDuration = 60;
 
-const WIDTHS = [480, 1600] as const;
-const CACHE_DIR = path.join(os.tmpdir(), "photo-archive-cache");
 
 // 응답은 반드시 private 캐시만 허용합니다.
 // (public 이면 CDN이 쿠키 검사 없이 사진을 내줄 수 있음)
@@ -81,8 +79,6 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
   if (!meta || !albumId) return NextResponse.json({ error: "사진을 찾을 수 없습니다" }, { status: 404 });
 
   await trashPhoto(id, albumId);
-  await Promise.all(
-    WIDTHS.map((w) => fs.unlink(path.join(CACHE_DIR, `${id}-${w}.webp`)).catch(() => {})),
-  );
+  await clearThumbs(id);
   return NextResponse.json({ ok: true });
 }

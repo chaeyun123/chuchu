@@ -13,7 +13,7 @@ export async function POST(req: Request) {
   const name = typeof body.name === "string" ? body.name.trim().normalize("NFC") : "";
   if (!name || name.length > 100 || /[\/\\?#%]/.test(name) || RESERVED_NAMES.has(name.toLowerCase())) {
     return NextResponse.json(
-      { error: "앨범 이름은 1~100자이고 / \\ ? # % 와 예약어(api, s, upload)는 쓸 수 없습니다" },
+      { error: "앨범 이름은 1~100자이고 / \\ ? # % 와 예약어(api, upload, albums, calendar, picks 등)는 쓸 수 없습니다" },
       { status: 400 },
     );
   }

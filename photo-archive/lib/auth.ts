@@ -45,5 +45,5 @@ export const cookieOptions = {
 };
 
 export const RESERVED_NAMES = new Set([
-  "api", "s", "upload", "logs", "_next", "favicon.ico", "robots.txt",
+  "api", "s", "upload", "logs", "albums", "calendar", "picks", "_next", "favicon.ico", "robots.txt",
 ]);

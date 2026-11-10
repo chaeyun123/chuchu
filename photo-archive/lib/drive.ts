@@ -6,7 +6,7 @@ import { env } from "./env";
  * Google Drive = DB
  *   루트 폴더 (DRIVE_ROOT_FOLDER_ID)
  *     └ 앨범 폴더 (폴더명 = 앨범명 = URL)    appProperties: { cover }
- *         └ 사진 파일 (원본 그대로)          appProperties: { caption, uploader, gameDate, opponent, result }
+ *         └ 사진 파일 (원본 그대로)          appProperties: { caption, uploader, gameDate, opponent, result, liked }
  *                                           + 드라이브가 자동 추출한 imageMediaMetadata
  */
 
@@ -23,6 +23,7 @@ export type Album = {
 
 export type Photo = {
   id: string;
+  albumId: string;
   name: string;
   mimeType: string;
   size: number;
@@ -34,6 +35,7 @@ export type Photo = {
   uploader?: string;
   device?: DeviceInfo;
   game: GameInfo;
+  liked: boolean; // 정원pick!
 };
 
 /** 드라이브가 EXIF에서 뽑아준 촬영 장치 정보 */
@@ -192,6 +194,7 @@ export function listPhotos(albumId: string): Promise<Photo[]> {
       };
       return {
         id: f.id,
+        albumId,
         name: f.name,
         mimeType: f.mimeType,
         size: Number(f.size ?? 0),
@@ -207,6 +210,7 @@ export function listPhotos(albumId: string): Promise<Photo[]> {
           opponent: ap.opponent || undefined,
           result: ap.result === "win" || ap.result === "lose" ? ap.result : undefined,
         },
+        liked: ap.liked === "1",
       };
     });
     // 촬영일 기준 정렬 (없으면 업로드일)
@@ -271,18 +275,67 @@ export async function trashPhoto(fileId: string, albumId: string): Promise<void>
     body: JSON.stringify({ trashed: true }),
   });
   invalidate(`photos:${albumId}`, `meta:${fileId}`);
+  await replaceCoverIfRemoved(albumId, fileId);
+}
 
-  // 대표 사진이 지워졌으면 남은 사진 중 첫 장으로 교체
+/** 대표 사진이 앨범에서 빠졌으면 남은 사진 중 첫 장으로 교체 */
+async function replaceCoverIfRemoved(albumId: string, fileId: string) {
   const album = await getAlbumById(albumId);
-  if (album?.cover === fileId) {
-    const next = (await listPhotos(albumId))[0]?.id ?? null;
-    await drive(`/files/${albumId}?fields=id`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ appProperties: { cover: next } }),
-    });
-    invalidate("albums");
-  }
+  if (album?.cover !== fileId) return;
+  const next = (await listPhotos(albumId))[0]?.id ?? null;
+  await drive(`/files/${albumId}?fields=id`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ appProperties: { cover: next } }),
+  });
+  invalidate("albums");
+}
+
+/** 사진을 다른 앨범(폴더)으로 이동 */
+export async function movePhoto(fileId: string, fromAlbumId: string, toAlbumId: string): Promise<void> {
+  if (fromAlbumId === toAlbumId) return;
+  const p = new URLSearchParams({ addParents: toAlbumId, removeParents: fromAlbumId, fields: "id" });
+  await drive(`/files/${fileId}?${p}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: "{}",
+  });
+  invalidate(`photos:${fromAlbumId}`, `photos:${toAlbumId}`, `meta:${fileId}`);
+  await replaceCoverIfRemoved(fromAlbumId, fileId);
+  await setAlbumCoverIfEmpty(toAlbumId, fileId);
+}
+
+/** 좋아요(정원pick!) 켜기/끄기 */
+export async function setPhotoLiked(fileId: string, albumId: string, liked: boolean): Promise<void> {
+  await drive(`/files/${fileId}?fields=id`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ appProperties: { liked: liked ? "1" : null } }),
+  });
+  invalidate(`photos:${albumId}`);
+}
+
+/** 앨범 삭제 = 폴더째 드라이브 휴지통으로 (30일 안에 복구 가능) */
+export async function trashAlbum(albumId: string): Promise<void> {
+  await drive(`/files/${albumId}?fields=id`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ trashed: true }),
+  });
+  invalidate("albums", `photos:${albumId}`);
+}
+
+/** 모든 앨범의 사진 (캘린더·정원pick!·홈에서 사용) */
+export async function listAllPhotos(): Promise<Photo[]> {
+  const albums = await listAlbums();
+  return (await Promise.all(albums.map((a) => listPhotos(a.id)))).flat();
+}
+
+/** 캘린더에 쓸 사진 날짜: 직접 입력한 경기 날짜 → 촬영일 → 업로드일(한국 시간) */
+export function photoDay(p: Photo): string {
+  if (p.game.date) return p.game.date;
+  if (p.takenAt) return p.takenAt.slice(0, 10);
+  return new Date(p.createdTime).toLocaleDateString("sv-SE", { timeZone: "Asia/Seoul" });
 }
 
 /** 사진이 들어 있는 앨범 id (아카이브 밖이면 undefined) */

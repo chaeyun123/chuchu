@@ -23,7 +23,7 @@ export default async function LogsPage() {
     <main className="wrap">
       <header className="top">
         <div>
-          <Link href="/" className="back">← 정원 목록</Link>
+          <Link href="/" className="back">← Home</Link>
           <h1>접속 기록</h1>
           <p className="muted">최근 {rows.length}건 · 전체 기록은 구글 드라이브의 ‘접속기록.csv’</p>
         </div>
