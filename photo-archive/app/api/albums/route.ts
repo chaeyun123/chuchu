@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
 import { ALBUM_NAME_ERROR, cleanAlbumName, hasEditAccess } from "@/lib/auth";
-import { createAlbum, listAlbums } from "@/lib/drive";
+import { createAlbum, invalidate, listAlbums } from "@/lib/drive";
 
 export async function GET() {
   if (!(await hasEditAccess())) return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  invalidate("albums"); // 업로드 화면용: 항상 최신 목록
   return NextResponse.json(await listAlbums());
 }
 

@@ -102,13 +102,20 @@ async function listAll<T>(query: string, fields: string, orderBy?: string): Prom
 }
 
 // ── 간단한 메모리 캐시 (드라이브 호출 최소화) ──────────────
+// 주의: Vercel은 서버 여러 대가 각자 캐시를 갖습니다. 한 서버에서 앨범을 만들어도
+// 다른 서버의 캐시는 모르기 때문에, 앨범을 못 찾으면 드라이브에 직접 확인합니다.
 const TTL = 60_000;
 const cache = new Map<string, { at: number; value: unknown }>();
-async function cached<T>(key: string, fn: () => Promise<T>): Promise<T> {
+async function cached<T>(
+  key: string,
+  fn: () => Promise<T>,
+  opts: { ttl?: number; keep?: (v: T) => boolean } = {},
+): Promise<T> {
   const hit = cache.get(key);
-  if (hit && Date.now() - hit.at < TTL) return hit.value as T;
+  if (hit && Date.now() - hit.at < (opts.ttl ?? TTL)) return hit.value as T;
   const value = await fn();
-  cache.set(key, { at: Date.now(), value });
+  // keep이 false면 저장하지 않음 (예: "못 찾음" 결과를 오래 기억하지 않도록)
+  if (!opts.keep || opts.keep(value)) cache.set(key, { at: Date.now(), value });
   return value;
 }
 export function invalidate(...keys: string[]) {
@@ -116,6 +123,9 @@ export function invalidate(...keys: string[]) {
 }
 
 // ── 앨범 ──────────────────────────────────────────────
+// 앨범 목록은 자주 바뀌므로 짧게(10초) 캐시
+const ALBUMS_TTL = 10_000;
+
 export function listAlbums(): Promise<Album[]> {
   return cached("albums", async () => {
     type Raw = { id: string; name: string; createdTime: string; appProperties?: Record<string, string> };
@@ -130,15 +140,58 @@ export function listAlbums(): Promise<Album[]> {
       createdTime: f.createdTime,
       cover: f.appProperties?.cover,
     }));
-  });
+  }, { ttl: ALBUMS_TTL });
 }
 
-export async function getAlbumByName(name: string): Promise<Album | undefined> {
-  return (await listAlbums()).find((a) => a.name === name);
+/** 목록을 다시 받아오기 (너무 자주 부르지 않도록 3초에 한 번만) */
+let lastRefresh = 0;
+async function refreshAlbums(): Promise<Album[]> {
+  if (Date.now() - lastRefresh > 3_000) {
+    lastRefresh = Date.now();
+    invalidate("albums");
+  }
+  return listAlbums();
+}
+
+/**
+ * 앨범 하나를 id로 드라이브에서 바로 확인.
+ * (드라이브 검색 목록은 새 폴더가 늦게 나타날 수 있지만, id로 조회하면 즉시 보입니다)
+ */
+function fetchAlbum(id: string): Promise<Album | undefined> {
+  if (!/^[\w-]{10,}$/.test(id)) return Promise.resolve(undefined);
+  return cached(`album:${id}`, async () => {
+    try {
+      type Raw = {
+        id: string; name: string; createdTime: string; mimeType: string;
+        trashed?: boolean; parents?: string[]; appProperties?: Record<string, string>;
+      };
+      const f: Raw = await (
+        await drive(`/files/${id}?fields=id,name,createdTime,mimeType,trashed,parents,appProperties`)
+      ).json();
+      if (f.trashed || f.mimeType !== FOLDER_MIME || !f.parents?.includes(env.rootFolderId)) return undefined;
+      return { id: f.id, name: f.name, createdTime: f.createdTime, cover: f.appProperties?.cover };
+    } catch {
+      return undefined;
+    }
+  }, { ttl: ALBUMS_TTL, keep: (v) => !!v });
+}
+
+/**
+ * 이름으로 앨범 찾기. 캐시에 없으면 목록을 새로 받아 보고,
+ * 방금 만든/이름 바꾼 앨범이라 id(hintId)를 알면 드라이브에 직접 확인합니다.
+ */
+export async function getAlbumByName(name: string, hintId?: string): Promise<Album | undefined> {
+  const hit = (await listAlbums()).find((a) => a.name === name);
+  if (hit) return hit;
+  if (hintId) {
+    const a = await fetchAlbum(hintId);
+    if (a?.name === name) return a;
+  }
+  return (await refreshAlbums()).find((a) => a.name === name);
 }
 
 export async function getAlbumById(id: string): Promise<Album | undefined> {
-  return (await listAlbums()).find((a) => a.id === id);
+  return (await listAlbums()).find((a) => a.id === id) ?? (await fetchAlbum(id));
 }
 
 export async function createAlbum(name: string): Promise<Album> {
@@ -158,7 +211,7 @@ export async function renameAlbum(albumId: string, name: string): Promise<void> 
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ name }),
   });
-  invalidate("albums");
+  invalidate("albums", `album:${albumId}`);
 }
 
 async function setAlbumCoverIfEmpty(albumId: string, photoId: string) {
@@ -169,7 +222,7 @@ async function setAlbumCoverIfEmpty(albumId: string, photoId: string) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ appProperties: { cover: photoId } }),
   });
-  invalidate("albums");
+  invalidate("albums", `album:${albumId}`);
 }
 
 // ── 사진 ──────────────────────────────────────────────
@@ -229,7 +282,7 @@ export function listPhotos(albumId: string): Promise<Photo[]> {
     return photos.sort((a, b) =>
       (a.takenAt ?? a.createdTime).localeCompare(b.takenAt ?? b.createdTime),
     );
-  });
+  }, { ttl: 15_000 }); // 업로드가 다른 서버에서 일어나도 15초 안에 보이도록
 }
 
 function exifToIso(t?: string): string | undefined {
@@ -249,13 +302,11 @@ export async function getArchivedPhotoMeta(fileId: string): Promise<FileMeta | n
         await drive(`/files/${fileId}?fields=id,name,mimeType,parents,size,trashed`)
       ).json();
       if (meta.trashed || !meta.mimeType.startsWith("image/")) return null;
-      const albums = await listAlbums();
-      const ok = meta.parents?.some((p) => albums.some((a) => a.id === p));
-      return ok ? meta : null;
+      return (await albumIdOf(meta)) ? meta : null;
     } catch {
       return null;
     }
-  });
+  }, { keep: (v) => v !== null }); // "못 찾음"은 기억하지 않음 (새 앨범 사진이 잠깐 404 나지 않도록)
 }
 
 /** 설명·경기 정보 수정. 빈 값은 삭제(null)로 처리합니다. */
@@ -301,7 +352,7 @@ async function replaceCoverIfRemoved(albumId: string, fileId: string) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ appProperties: { cover: next } }),
   });
-  invalidate("albums");
+  invalidate("albums", `album:${albumId}`);
 }
 
 /** 사진을 다른 앨범(폴더)으로 이동 */
@@ -335,7 +386,7 @@ export async function trashAlbum(albumId: string): Promise<void> {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ trashed: true }),
   });
-  invalidate("albums", `photos:${albumId}`);
+  invalidate("albums", `photos:${albumId}`, `album:${albumId}`);
 }
 
 /** 모든 앨범의 사진 (캘린더·정원pick!·홈에서 사용) */
@@ -353,8 +404,10 @@ export function photoDay(p: Photo): string {
 
 /** 사진이 들어 있는 앨범 id (아카이브 밖이면 undefined) */
 export async function albumIdOf(meta: FileMeta): Promise<string | undefined> {
-  const albums = await listAlbums();
-  return meta.parents?.find((p) => albums.some((a) => a.id === p));
+  for (const p of meta.parents ?? []) {
+    if (await getAlbumById(p)) return p;
+  }
+  return undefined;
 }
 
 export async function downloadFile(fileId: string): Promise<Response> {

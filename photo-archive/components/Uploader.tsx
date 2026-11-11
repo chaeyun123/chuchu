@@ -115,7 +115,7 @@ export default function Uploader({ initialAlbum }: { initialAlbum?: string }) {
       }
       if (failed === 0) {
         setMessage("업로드 완료! 앨범으로 이동합니다…");
-        setTimeout(() => router.push(`/${encodeURIComponent(targetName)}`), 800);
+        setTimeout(() => router.push(`/${encodeURIComponent(targetName)}?id=${target}`), 800);
       } else {
         setMessage(`${failed}개 파일이 실패했습니다. 다시 ‘업로드’를 누르면 실패한 파일만 재시도합니다.`);
       }

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { hasEditAccess, hasViewAccess } from "@/lib/auth";
-import { getAlbumByName, listAlbums, listPhotos } from "@/lib/drive";
+import { getAlbumByName, invalidate, listAlbums, listPhotos } from "@/lib/drive";
 import Locked from "@/components/Locked";
 import Gallery from "@/components/Gallery";
 import AlbumDelete from "@/components/AlbumDelete";
@@ -13,11 +13,21 @@ function decode(s: string) {
   try { return decodeURIComponent(s).normalize("NFC"); } catch { return s.normalize("NFC"); }
 }
 
-export default async function AlbumPage({ params }: { params: Promise<{ album: string }> }) {
+export default async function AlbumPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ album: string }>;
+  searchParams: Promise<{ id?: string }>;
+}) {
   if (!(await hasViewAccess())) return <Locked />;
   const name = decode((await params).album);
-  const album = await getAlbumByName(name);
+  // ?id= : 방금 만들거나 이름 바꾼 앨범 (다른 서버 캐시에 아직 없을 수 있어 직접 확인)
+  const { id: justChanged } = await searchParams;
+  const album = await getAlbumByName(name, justChanged);
   if (!album) notFound();
+  // 방금 업로드/생성 직후라면 이 서버의 사진 목록 캐시를 버리고 새로 받기
+  if (justChanged) invalidate(`photos:${album.id}`);
   const [photos, albums, canEdit] = await Promise.all([listPhotos(album.id), listAlbums(), hasEditAccess()]);
 
   return (

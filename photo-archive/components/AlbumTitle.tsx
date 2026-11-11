@@ -25,7 +25,7 @@ export default function AlbumTitle({ id, name, canEdit }: { id: string; name: st
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || `오류 ${res.status}`);
       // 이름이 곧 주소라서 새 주소로 이동
-      router.replace(`/${encodeURIComponent(data.name)}`);
+      router.replace(`/${encodeURIComponent(data.name)}?id=${data.id}`);
       router.refresh();
     } catch (err) {
       setError((err as Error).message);

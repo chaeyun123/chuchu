@@ -23,7 +23,7 @@ export default function NewAlbum() {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || `오류 ${res.status}`);
-      router.push(`/${encodeURIComponent(data.name)}`);
+      router.push(`/${encodeURIComponent(data.name)}?id=${data.id}`);
     } catch (err) {
       setError((err as Error).message);
       setBusy(false);
