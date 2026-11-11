@@ -1,4 +1,4 @@
-import { hasUploadAccess, hasViewAccess } from "@/lib/auth";
+import { hasEditAccess, hasViewAccess } from "@/lib/auth";
 import { listAlbums, listAllPhotos } from "@/lib/drive";
 import Locked from "@/components/Locked";
 import Gallery from "@/components/Gallery";
@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 // 정원pick! = 좋아요 누른 사진 모음 (원래 앨범에도 그대로 있음)
 export default async function PicksPage() {
   if (!(await hasViewAccess())) return <Locked />;
-  const [all, albums, canEdit] = await Promise.all([listAllPhotos(), listAlbums(), hasUploadAccess()]);
+  const [all, albums, canEdit] = await Promise.all([listAllPhotos(), listAlbums(), hasEditAccess()]);
   const picks = all.filter((p) => p.liked);
 
   return (

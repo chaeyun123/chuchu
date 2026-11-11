@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
-import { hasUploadAccess } from "@/lib/auth";
+import { hasEditAccess } from "@/lib/auth";
 import { albumIdOf, getArchivedPhotoMeta, updatePhotoInfo, type GameInfo } from "@/lib/drive";
 import { isTeam } from "@/lib/teams";
 
 /** PATCH /api/photo/<id>/info  { caption, date, opponent, result, uniform }  — 업로드 권한이 있어야 수정 가능 */
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
-  if (!(await hasUploadAccess())) return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  if (!(await hasEditAccess())) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const { id } = await params;
   const meta = await getArchivedPhotoMeta(id);
   const albumId = meta && (await albumIdOf(meta));

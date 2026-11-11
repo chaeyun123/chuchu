@@ -14,11 +14,8 @@ async function json<T>(res: Response): Promise<T> {
   return data as T;
 }
 
-export default function Uploader({ authorized, initialAlbum }: { authorized: boolean; initialAlbum?: string }) {
+export default function Uploader({ initialAlbum }: { initialAlbum?: string }) {
   const router = useRouter();
-  const [authed, setAuthed] = useState(authorized);
-  const [password, setPassword] = useState("");
-  const [loginError, setLoginError] = useState("");
 
   const [albums, setAlbums] = useState<Album[]>([]);
   const [albumId, setAlbumId] = useState("");
@@ -36,28 +33,12 @@ export default function Uploader({ authorized, initialAlbum }: { authorized: boo
   }, []);
 
   useEffect(() => {
-    if (!authed) return;
     fetch("/api/albums").then(json<Album[]>).then((list) => {
       setAlbums(list);
       const init = list.find((a) => a.name === initialAlbum) ?? list[0];
       if (init) setAlbumId(init.id);
     }).catch((e) => setMessage(e.message));
-  }, [authed, initialAlbum]);
-
-  async function login(e: React.FormEvent) {
-    e.preventDefault();
-    setLoginError("");
-    try {
-      await json(await fetch("/api/upload/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ password }),
-      }));
-      setAuthed(true);
-    } catch (err) {
-      setLoginError((err as Error).message);
-    }
-  }
+  }, [initialAlbum]);
 
   function addFiles(list: FileList | null) {
     if (!list) return;
@@ -143,19 +124,6 @@ export default function Uploader({ authorized, initialAlbum }: { authorized: boo
     } finally {
       setBusy(false);
     }
-  }
-
-  if (!authed) {
-    return (
-      <form className="card" onSubmit={login}>
-        <label>
-          업로드 비밀번호
-          <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoFocus />
-        </label>
-        {loginError && <p className="error">{loginError}</p>}
-        <button className="btn" type="submit">확인</button>
-      </form>
-    );
   }
 
   const pending = items.filter((it) => it.status !== "완료").length;

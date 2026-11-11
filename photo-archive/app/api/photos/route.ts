@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { hasUploadAccess } from "@/lib/auth";
+import { hasEditAccess } from "@/lib/auth";
 import { albumIdOf, getAlbumById, getArchivedPhotoMeta, movePhoto, trashPhoto } from "@/lib/drive";
 import { clearThumbs } from "@/lib/thumbs";
 
@@ -11,7 +11,7 @@ export const maxDuration = 60;
  *   { action: "move",   ids: [...], to: "<앨범 id>" }
  */
 export async function POST(req: Request) {
-  if (!(await hasUploadAccess())) return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  if (!(await hasEditAccess())) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const { action, ids, to } = await req.json().catch(() => ({}));
   if (!Array.isArray(ids) || ids.length === 0 || ids.length > 200 || !ids.every((i) => typeof i === "string")) {
     return NextResponse.json({ error: "사진을 선택해 주세요" }, { status: 400 });

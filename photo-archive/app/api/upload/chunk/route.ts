@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { hasUploadAccess } from "@/lib/auth";
+import { hasEditAccess } from "@/lib/auth";
 import { isValidSessionUrl, uploadChunk } from "@/lib/drive";
 
 // 브라우저 → (4MB 조각) → 이 라우트 → Google Drive 업로드 세션
@@ -7,7 +7,7 @@ import { isValidSessionUrl, uploadChunk } from "@/lib/drive";
 export const maxDuration = 60;
 
 export async function PUT(req: Request) {
-  if (!(await hasUploadAccess())) return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  if (!(await hasEditAccess())) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const url = new URL(req.url);
   const session = url.searchParams.get("session") ?? "";
   const start = Number(url.searchParams.get("start"));

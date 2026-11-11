@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { hasUploadAccess, hasViewAccess } from "@/lib/auth";
+import { hasEditAccess, hasViewAccess } from "@/lib/auth";
 import { getAlbumByName, listAlbums, listPhotos } from "@/lib/drive";
 import Locked from "@/components/Locked";
 import Gallery from "@/components/Gallery";
@@ -18,7 +18,7 @@ export default async function AlbumPage({ params }: { params: Promise<{ album: s
   const name = decode((await params).album);
   const album = await getAlbumByName(name);
   if (!album) notFound();
-  const [photos, albums, canEdit] = await Promise.all([listPhotos(album.id), listAlbums(), hasUploadAccess()]);
+  const [photos, albums, canEdit] = await Promise.all([listPhotos(album.id), listAlbums(), hasEditAccess()]);
 
   return (
     <main className="wrap">
@@ -30,7 +30,7 @@ export default async function AlbumPage({ params }: { params: Promise<{ album: s
         </div>
         <div className="top-actions">
           {canEdit && <AlbumDelete id={album.id} name={album.name} count={photos.length} />}
-          <Link href={`/upload?album=${encodeURIComponent(album.name)}`} className="btn">이 앨범에 올리기</Link>
+          {canEdit && <Link href={`/upload?album=${encodeURIComponent(album.name)}`} className="btn">이 앨범에 올리기</Link>}
         </div>
       </header>
       {photos.length === 0 ? (

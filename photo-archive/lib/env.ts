@@ -11,7 +11,6 @@ export const env = {
   get rootFolderId() { return req("DRIVE_ROOT_FOLDER_ID"); },
   get siteId() { return req("SITE_ID"); },
   get sitePassword() { return req("SITE_PASSWORD"); },
-  get uploadPassword() { return req("UPLOAD_PASSWORD"); },
   get adminPassword() { return req("ADMIN_PASSWORD"); },
   get cookieSecret() { return req("COOKIE_SECRET"); },
 };

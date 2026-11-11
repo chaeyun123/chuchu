@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { hasAdminAccess, hasViewAccess } from "@/lib/auth";
+import { hasLogAccess, hasViewAccess } from "@/lib/auth";
 import { readAccessLog } from "@/lib/drive";
 import Locked from "@/components/Locked";
 import AdminLogin from "@/components/AdminLogin";
@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 // 접속 기록 보기 — ADMIN_PASSWORD로 확인한 관리자만
 export default async function LogsPage() {
   if (!(await hasViewAccess())) return <Locked />;
-  if (!(await hasAdminAccess())) return <AdminLogin />;
+  if (!(await hasLogAccess())) return <AdminLogin />;
   const rows = (await readAccessLog()).reverse().slice(0, 500);
 
   return (

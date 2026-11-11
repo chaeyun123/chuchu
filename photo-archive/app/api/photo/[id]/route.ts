@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import fs from "node:fs/promises";
 import path from "node:path";
 import sharp from "sharp";
-import { hasUploadAccess, hasViewAccess } from "@/lib/auth";
+import { hasEditAccess, hasViewAccess } from "@/lib/auth";
 import { albumIdOf, downloadFile, getArchivedPhotoMeta, trashPhoto } from "@/lib/drive";
 import { CACHE_DIR, WIDTHS, clearThumbs } from "@/lib/thumbs";
 
@@ -72,7 +72,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
 
 /** DELETE /api/photo/<id>  — 드라이브 휴지통으로 이동. 업로드 권한 필요 */
 export async function DELETE(_req: Request, { params }: { params: Promise<{ id: string }> }) {
-  if (!(await hasUploadAccess())) return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  if (!(await hasEditAccess())) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const { id } = await params;
   const meta = await getArchivedPhotoMeta(id);
   const albumId = meta && (await albumIdOf(meta));

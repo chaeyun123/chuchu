@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { hasAdminAccess, hasUploadAccess, hasViewAccess } from "@/lib/auth";
+import { hasLogAccess, hasEditAccess, hasViewAccess } from "@/lib/auth";
 import { listAlbums, listAllPhotos } from "@/lib/drive";
 import Locked from "@/components/Locked";
 import Gallery from "@/components/Gallery";
@@ -12,8 +12,8 @@ export default async function Home() {
   const [all, albums, canEdit, isAdmin] = await Promise.all([
     listAllPhotos(),
     listAlbums(),
-    hasUploadAccess(),
-    hasAdminAccess(),
+    hasEditAccess(),
+    hasLogAccess(),
   ]);
 
   return (
@@ -22,11 +22,11 @@ export default async function Home() {
         <p className="muted">사진 {all.length}장 · 앨범 {albums.length}개</p>
         <div className="top-actions">
           {isAdmin && <Link href="/logs" className="btn ghost">접속 기록</Link>}
-          <Link href="/upload" className="btn">사진 올리기</Link>
+          {canEdit && <Link href="/upload" className="btn">사진 올리기</Link>}
         </div>
       </header>
       {all.length === 0 ? (
-        <p className="muted empty">아직 사진이 없습니다. ‘사진 올리기’에서 첫 사진을 올려 보세요.</p>
+        <p className="muted empty">아직 사진이 없습니다.</p>
       ) : (
         <Gallery
           photos={all}

@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
-import { hasUploadAccess } from "@/lib/auth";
+import { hasEditAccess } from "@/lib/auth";
 import { getAlbumById, startUpload } from "@/lib/drive";
 
 const MAX_SIZE = 200 * 1024 * 1024; // 200MB
 
 export async function POST(req: Request) {
-  if (!(await hasUploadAccess())) return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  if (!(await hasEditAccess())) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const b = await req.json().catch(() => ({}));
   const { albumId, name, mimeType, size, caption, uploader } = b ?? {};
 

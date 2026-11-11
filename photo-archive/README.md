@@ -5,7 +5,7 @@ Google Drive를 저장소 겸 DB로 쓰는 비공개 사진 아카이브입니�
 - 사이트에 들어오면 먼저 **아이디/비밀번호**(`SITE_ID` / `SITE_PASSWORD`)를 입력해야 합니다. 주소가 공개된 곳에 올라가도 비밀번호 없이는 볼 수 없습니다.
 - 로그인은 약 400일 유지됩니다. 앨범을 누르면 `https://내사이트/앨범명` 주소로 이동합니다.
 - 로그인 성공/실패와 방문(탭을 열 때마다 1번)은 드라이브 루트 폴더의 `접속기록.csv`에 남고, 관리자 비밀번호(`ADMIN_PASSWORD`)를 아는 사람만 `/logs` 페이지에서 볼 수 있습니다.
-- 웹에서 업로드하면 드라이브에 저장됩니다(업로드 비밀번호 필요).
+- 계정은 두 가지입니다. **관리자**(`SITE_ID`)는 업로드·수정·삭제·이동·앨범 관리까지, **보기 전용**(`USER_ID`)은 사진 보기와 정원pick!(좋아요)만 할 수 있습니다. 업로드한 사진은 드라이브에 저장됩니다.
 - 원본 다운로드를 지원합니다.
 
 ## 드라이브 저장 구조 (= DB)
@@ -60,9 +60,9 @@ node -e "console.log(require('crypto').randomBytes(24).toString('base64url'))"
 
 | 변수 | 설명 |
 |---|---|
-| `SITE_ID` / `SITE_PASSWORD` | 사이트 입장용 아이디와 비밀번호 |
+| `SITE_ID` / `SITE_PASSWORD` | 관리자 계정 (업로드·수정·삭제 가능) |
+| `USER_ID` / `USER_PASSWORD` | 보기 전용 계정 (보기 + 정원pick!). 비워 두면 꺼짐 |
 | `ADMIN_PASSWORD` | 접속 기록(`/logs`) 보기 비밀번호. 본인만 알고 있기 |
-| `UPLOAD_PASSWORD` | 업로드 비밀번호. 사진을 올릴 사람에게만 알려줍니다 |
 | `COOKIE_SECRET` | 쿠키 서명용 |
 
 ### 3. 실행
@@ -75,7 +75,7 @@ npm run dev
 ### 4. 배포 (Vercel 추천)
 
 1. GitHub에 올립니다. `.env.local`은 `.gitignore`에 들어 있어 올라가지 않습니다.
-2. https://vercel.com 에서 저장소를 Import하고, **Environment Variables**에 `.env.local`의 9개 값을 넣습니다.
+2. https://vercel.com 에서 저장소를 Import하고, **Environment Variables**에 `.env.local`의 10개 값을 넣습니다.
 3. 배포가 끝나면 `https://<도메인>` 주소와 아이디/비밀번호를 알려주면 됩니다.
 
 > 직접 서버(`npm run build && npm start`)에서 돌릴 때는 HTTPS가 필요합니다. 쿠키에 Secure 속성이 붙기 때문입니다. localhost는 예외입니다.
@@ -84,7 +84,7 @@ npm run dev
 
 ## 알아두면 좋은 점
 
-- **비밀번호를 바꾸고 싶을 때**: `SITE_ID`나 `SITE_PASSWORD`를 바꾸면 기존 로그인이 모두 풀립니다. `UPLOAD_PASSWORD`도 같은 방식으로 동작합니다.
+- **비밀번호를 바꾸고 싶을 때**: `SITE_ID`나 `SITE_PASSWORD`를 바꾸면 기존 로그인이 모두 풀립니다. `USER_ID`/`USER_PASSWORD`도 같은 방식이며, 바꾼 계정만 다시 로그인하면 됩니다.
 - **사진 삭제나 이름 변경**: 구글 드라이브에서 직접 하면 됩니다. 사이트에는 1분 안에 반영됩니다.
 - **드라이브에 직접 넣은 사진은 보이지 않습니다.** `drive.file` 권한은 이 앱이 만든 파일만 볼 수 있어서, 사진은 반드시 웹 업로드로 올려야 합니다. 대신 이 권한 덕분에 앱이 내 드라이브의 다른 파일에는 접근할 수 없습니다.
 - **썸네일**: 서버가 원본을 줄여 WebP로 보여줍니다. 이 과정에서 위치정보 같은 EXIF가 제거됩니다. 원본 다운로드는 파일을 그대로 주므로 EXIF가 남아 있습니다.

@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
-import { ALBUM_NAME_ERROR, cleanAlbumName, hasUploadAccess } from "@/lib/auth";
+import { ALBUM_NAME_ERROR, cleanAlbumName, hasEditAccess } from "@/lib/auth";
 import { getAlbumById, listAlbums, renameAlbum, trashAlbum } from "@/lib/drive";
 
 /** PATCH /api/albums/<id>  { name } — 앨범 이름 바꾸기. 업로드 권한 필요 */
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
-  if (!(await hasUploadAccess())) return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  if (!(await hasEditAccess())) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const { id } = await params;
   if (!(await getAlbumById(id))) return NextResponse.json({ error: "앨범을 찾을 수 없습니다" }, { status: 404 });
   const name = cleanAlbumName((await req.json().catch(() => ({}))).name);
@@ -19,7 +19,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
 /** DELETE /api/albums/<id> — 앨범(폴더)째 드라이브 휴지통으로. 업로드 권한 필요 */
 export async function DELETE(_req: Request, { params }: { params: Promise<{ id: string }> }) {
-  if (!(await hasUploadAccess())) return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  if (!(await hasEditAccess())) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const { id } = await params;
   if (!(await getAlbumById(id))) return NextResponse.json({ error: "앨범을 찾을 수 없습니다" }, { status: 404 });
   await trashAlbum(id);

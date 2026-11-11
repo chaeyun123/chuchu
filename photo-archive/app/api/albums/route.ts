@@ -1,14 +1,14 @@
 import { NextResponse } from "next/server";
-import { ALBUM_NAME_ERROR, cleanAlbumName, hasUploadAccess } from "@/lib/auth";
+import { ALBUM_NAME_ERROR, cleanAlbumName, hasEditAccess } from "@/lib/auth";
 import { createAlbum, listAlbums } from "@/lib/drive";
 
 export async function GET() {
-  if (!(await hasUploadAccess())) return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  if (!(await hasEditAccess())) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   return NextResponse.json(await listAlbums());
 }
 
 export async function POST(req: Request) {
-  if (!(await hasUploadAccess())) return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  if (!(await hasEditAccess())) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const body = await req.json().catch(() => ({}));
   const name = cleanAlbumName(body.name);
   if (!name) return NextResponse.json({ error: ALBUM_NAME_ERROR }, { status: 400 });
